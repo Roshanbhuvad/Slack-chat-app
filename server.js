@@ -3,6 +3,7 @@ const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
 const formatMessage = require("./utils/messages");
+const { userJoin, getCurrentUser } = require("./utils/users");
 
 const app = express();
 const server = http.createServer(app);
@@ -15,26 +16,28 @@ const botName = "Admin";
 
 //Run when client connects
 io.on("connection", (socket) => {
+  socket.on("joinRoom", ({ username, room }) => {
+    //this below emit for only single client who are going to connect or join the group
+    socket.emit("message", formatMessage(botName, "Welcome to Slack chat")); //we are transferring welcome message to main.js socket.on method
+
+    //Broadcast when a user connects
+    socket.broadcast.emit(
+      "message",
+      formatMessage(botName, "A user has joined the chat")
+    ); //this emit send message(broadcast) to all existing users except the connecting user
+  });
   //console.log("New WS connection ...");
 
-  //this below emit for only single client who are going to connect or join the group
-  socket.emit("message", formatMessage(botName, "Welcome to Slack chat")); //we are transferring welcome message to main.js socket.on method
-
-  //Broadcast when a user connects
-  socket.broadcast.emit(
-    "message",
-    formatMessage(botName, "A user has joined the chat")
-  ); //this emit send message(broadcast) to all existing users except the connecting user
-
-  // Runs when client disconnects
-  socket.on("disconnect", () => {
-    io.emit("message", formatMessage(botName, "A user has left the chat"));
-  });
   //io.emit(); //this emit for all the users including the connecting user also
 
   // Listen for chatMessage
   socket.on("chatMessage", (msg) => {
     io.emit("message", formatMessage("USER", msg));
+  });
+
+  // Runs when client disconnects
+  socket.on("disconnect", () => {
+    io.emit("message", formatMessage(botName, "A user has left the chat"));
   });
 });
 const PORT = 3000 || process.env.PORT;
